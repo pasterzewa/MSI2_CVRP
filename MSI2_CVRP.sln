@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33122.133
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MSI2_CVRP", "MSI2_CVRP\MSI2_CVRP.csproj", "{6B34B059-A568-4A88-9320-175F7F14C6E8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B34B059-A568-4A88-9320-175F7F14C6E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B34B059-A568-4A88-9320-175F7F14C6E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B34B059-A568-4A88-9320-175F7F14C6E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B34B059-A568-4A88-9320-175F7F14C6E8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9250AD0E-27F1-432C-AE17-FEAE56F44B57}
+	EndGlobalSection
+EndGlobal

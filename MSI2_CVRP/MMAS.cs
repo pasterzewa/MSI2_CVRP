@@ -1,0 +1,217 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
+namespace MSI2_CVRP
+{
+    public class MMAS
+    {
+        private Random random = new (123);
+        private int maxTime = 1500;
+        private double alpha = 1; // pheromone priority
+        private double beta = 2; // heuristic priority
+        private double rho = 0.1; // pheromone decrease factor
+        private double Q = 2.0; // pheromone increase factor
+
+        private int[] bestGlobalPath;
+        public int bestGlobalPathLength = int.MaxValue;
+        private int[] bestIterativePath;
+        private int bestIterativePathLength = int.MaxValue;
+
+        private Ant[] ants;
+        private int capacity;
+        private int usedTrucks;
+
+        private int numberOfTrucks;
+        private int numberOfAnts;
+        private double pheromoneMax = 300;
+        private double pheromoneMin = 0;
+
+        public int[] demands; // indeksy miast od 1, 0 to indeks magazynu i jego demand jest 0
+        public int[,] distances;
+        public double[,] pheromones;
+        public int numberOfCities; // z magazynem
+
+        public MMAS (int citiesCount, int numberOfTrucks, int capacityOfTruck, int[,] dists, int[] needs)
+        {
+            numberOfCities = citiesCount;
+            demands = needs;
+            this.numberOfTrucks = numberOfTrucks;
+            capacity = capacityOfTruck;
+            numberOfAnts = numberOfCities - 1; // mrówka na miasto, poza magazynem
+
+            distances = dists;
+            pheromones = new double[numberOfCities, numberOfCities];
+            for (int i = 0; i < numberOfCities; i++)
+            {
+                for (int j = i; j < numberOfCities; j++)
+                {
+                    if (i == j)
+                    {
+                        pheromones[i, j] = 0;
+                    }
+                    else
+                    {
+                        pheromones[i, j] = pheromoneMax;
+                        pheromones[j, i] = pheromones[i, j];
+                    }
+                }
+            }
+
+            ants = new Ant[numberOfAnts];
+            for (int i = 0; i < numberOfAnts; i++)
+            {
+                int city = i + 1; // miasta od 1
+                ants[i] = new Ant (capacity, city, demands[city], distances[0, city], numberOfCities, i);
+            }
+        }
+
+        public void ResetAnts ()
+        {
+            ants = new Ant[numberOfAnts];
+            for (int i = 0; i < numberOfAnts; i++) 
+            {
+                int city = i + 1;
+                ants[i] = new Ant (capacity, city, demands[city], distances[0, city], numberOfCities, i);
+            }
+        }
+
+        public void PrintInformation ()
+        {
+            PrintPathInformation ();
+
+            Console.WriteLine ("-------------------");
+            Console.WriteLine ("Number of trucks used: " + usedTrucks);
+
+            if (numberOfTrucks != -1)
+            {
+                Console.WriteLine ("Expected number of trucks: " + numberOfTrucks);
+                if (numberOfTrucks == usedTrucks)
+                    Console.WriteLine ("Algorithm achived expected number of trucks!");
+                else if (numberOfTrucks > usedTrucks)
+                    Console.WriteLine ("Algorithm used less trucks than expected.");
+                else if (numberOfTrucks < usedTrucks)
+                    Console.WriteLine ("Algorithm used more trucks than expected.");
+            }
+        }
+
+        private void PrintPathInformation ()
+        {
+            Console.WriteLine ("Best path");
+            for (int i = 0; i < bestGlobalPath.Length; i++)
+            {
+                if (i == bestGlobalPath.Length - 1)
+                    Console.WriteLine (i);
+                else
+                    Console.Write (i + "->");
+            }
+            Console.WriteLine ("Length: " + bestGlobalPathLength);
+            Console.WriteLine ("-------------------");
+        }
+
+        public void StartAlgorithm ()
+        {
+            Console.WriteLine ("Starting algorithm...");
+            int loop = 0;
+
+            while (loop < maxTime)
+            {
+                if (loop % 100 == 0)
+                {
+                    Console.WriteLine ("Still going... Loop " + loop);
+                }
+
+                ResetAnts ();
+
+                // construct ant solutions
+                ConstructSolutions ();
+
+                FindBestTrail ();
+
+                // update pheromones
+                UpdatePheromones ();
+
+                loop++;
+            }
+
+            Console.WriteLine ("Best solution was found");
+            PrintInformation ();
+        }
+
+        private void ConstructSolutions ()
+        {
+            for (int i = 0; i < ants.Length; i++)
+            {
+                while (!ants[i].AntDone (distances))
+                    ants[i].ChooseNextCity (distances, demands, pheromones, alpha, beta, random);
+            }
+        }
+
+        private void FindBestTrail ()
+        {
+            bestIterativePathLength = int.MaxValue;
+
+            foreach (var ant in ants)
+            {
+                if (ant.Length < bestGlobalPathLength)
+                {
+                    bestGlobalPathLength = ant.Length;
+                    bestGlobalPath = ant.Path.ToArray ();
+                    usedTrucks = ant.UsedTrucks;
+
+                    Console.WriteLine ("A better path was found.");
+                    PrintPathInformation ();
+                }
+
+                if (ant.Length < bestIterativePathLength)
+                {
+                    bestIterativePathLength = ant.Length;
+                    bestIterativePath = ant.Path.ToArray ();
+                }
+            }
+        }
+
+        private void UpdatePheromones ()
+        {
+            // dla wszystkich parujemy
+            for (int i = 0; i < pheromones.GetLength (0); i++)
+            {
+                for (int j = i; j < pheromones.GetLength (0); j++)
+                {
+                    double decrease = (1 - rho) * pheromones[i, j];
+                    pheromones[i, j] = decrease;
+                    pheromones[j, i] = pheromones[i, j];
+                }
+            }
+
+            // dla najlepszej w iteracji zwiększamy
+            double increase = Q / bestIterativePathLength;
+            for (int i = 0; i < bestIterativePath.Count() - 1; i++)
+            {
+                pheromones[bestIterativePath[i], bestIterativePath[i + 1]] += increase;
+                pheromones[bestIterativePath[i + 1], bestIterativePath[i]] += increase;
+            }
+
+            // ograniczamy wszystkie
+            for (int i = 0; i < pheromones.GetLength (0); i++)
+            {
+                for (int j = i; j < pheromones.GetLength (0); j++)
+                {
+                    if (pheromones[i, j] > pheromoneMax)
+                    {
+                        pheromones[i, j] = pheromoneMax;
+                        pheromones[j, i] = pheromoneMax;
+                    }
+                    if (pheromones[i, j] < pheromoneMin)
+                    {
+                        pheromones[i, j] = pheromoneMin;
+                        pheromones[j, i] = pheromoneMin;
+                    }
+                }
+            }
+        }
+    }
+}
